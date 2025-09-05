@@ -1,0 +1,409 @@
+local Library = {}
+
+-- Configurações padrão
+Library.Themes = {
+    Default = {
+        Main = Color3.fromRGB(30, 30, 30),      -- Preto
+        Secondary = Color3.fromRGB(50, 50, 50), -- Cinza escuro
+        Text = Color3.fromRGB(220, 220, 220),   -- Cinza claro
+        Accent = Color3.fromRGB(180, 0, 0)      -- Vermelho escuro
+    },
+    RGB = {
+        Main = Color3.fromRGB(30, 30, 30),      -- Preto (mantido)
+        Secondary = Color3.fromRGB(50, 50, 50), -- Cinza escuro (mantido)
+        Text = Color3.fromRGB(220, 220, 220),   -- Cinza claro (mantido)
+        Accent = function()
+            return Color3.fromHSV(tick() % 5 / 5, 1, 1) -- Cor RGB que muda
+        end
+    }
+}
+
+Library.CurrentTheme = "Default"
+
+-- Função para criar elementos de UI
+function Library:CreateWindow(name)
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = name
+    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 450, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.BackgroundColor3 = self.Themes.Default.Main
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 6)
+    UICorner.Parent = MainFrame
+
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
+    TopBar.Size = UDim2.new(1, 0, 0, 30)
+    TopBar.Position = UDim2.new(0, 0, 0, 0)
+    TopBar.BackgroundColor3 = self.Themes.Default.Secondary
+    TopBar.BorderSizePixel = 0
+    TopBar.Parent = MainFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Size = UDim2.new(1, -10, 1, 0)
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = name
+    Title.TextColor3 = self.Themes.Default.Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+    Title.Parent = TopBar
+
+    local TabContainer = Instance.new("Frame")
+    TabContainer.Name = "TabContainer"
+    TabContainer.Size = UDim2.new(1, 0, 0, 30)
+    TabContainer.Position = UDim2.new(0, 0, 0, 30)
+    TabContainer.BackgroundColor3 = self.Themes.Default.Main
+    TabContainer.BorderSizePixel = 0
+    TabContainer.Parent = MainFrame
+
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+    UIListLayout.Parent = TabContainer
+
+    local ContentContainer = Instance.new("Frame")
+    ContentContainer.Name = "ContentContainer"
+    ContentContainer.Size = UDim2.new(1, -20, 1, -70)
+    ContentContainer.Position = UDim2.new(0, 10, 0, 60)
+    ContentContainer.BackgroundTransparency = 1
+    ContentContainer.Parent = MainFrame
+
+    local ContentUIListLayout = Instance.new("UIListLayout")
+    ContentUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ContentUIListLayout.Padding = UDim.new(0, 10)
+    ContentUIListLayout.Parent = ContentContainer
+
+    local Tabs = {}
+    local ActiveTab = nil
+
+    function self:SetTheme(themeId)
+        if themeId == 1 then
+            self.CurrentTheme = "RGB"
+        else
+            self.CurrentTheme = "Default"
+        end
+        self:UpdateColors(ScreenGui)
+    end
+
+    function self:UpdateColors(gui)
+        for _, element in pairs(gui:GetDescendants()) do
+            if element:IsA("Frame") then
+                if element.Name == "MainFrame" then
+                    element.BackgroundColor3 = self.Themes.Default.Main
+                elseif element.Name == "TopBar" or element.Name == "TabContainer" then
+                    element.BackgroundColor3 = self.Themes.Default.Secondary
+                elseif element.Name == "ToggleBackground" then
+                    element.BackgroundColor3 = self.Themes.Default.Secondary
+                elseif element.Name == "ToggleIndicator" then
+                    if self.CurrentTheme == "RGB" then
+                        coroutine.wrap(function()
+                            while element and element.Parent do
+                                element.BackgroundColor3 = self.Themes.RGB.Accent()
+                                wait(0.1)
+                            end
+                        end)()
+                    else
+                        element.BackgroundColor3 = self.Themes.Default.Accent
+                    end
+                elseif element.Name == "Button" then
+                    if self.CurrentTheme == "RGB" then
+                        coroutine.wrap(function()
+                            while element and element.Parent do
+                                element.BackgroundColor3 = self.Themes.RGB.Accent()
+                                wait(0.1)
+                            end
+                        end)()
+                    else
+                        element.BackgroundColor3 = self.Themes.Default.Accent
+                    end
+                end
+            elseif element:IsA("TextLabel") or element:IsA("TextButton") then
+                element.TextColor3 = self.Themes.Default.Text
+            end
+        end
+    end
+
+    function Tabs:AddTab(name)
+        local TabButton = Instance.new("TextButton")
+        TabButton.Name = "TabButton_" .. name
+        TabButton.Size = UDim2.new(0, 80, 1, 0)
+        TabButton.BackgroundColor3 = self.Themes.Default.Main
+        TabButton.BorderSizePixel = 0
+        TabButton.Text = name
+        TabButton.TextColor3 = self.Themes.Default.Text
+        TabButton.Font = Enum.Font.Gotham
+        TabButton.TextSize = 12
+        TabButton.Parent = TabContainer
+
+        local TabContent = Instance.new("ScrollingFrame")
+        TabContent.Name = "TabContent_" .. name
+        TabContent.Size = UDim2.new(1, 0, 1, 0)
+        TabContent.Position = UDim2.new(0, 0, 0, 0)
+        TabContent.BackgroundTransparency = 1
+        TabContent.BorderSizePixel = 0
+        TabContent.ScrollBarThickness = 5
+        TabContent.Visible = false
+        TabContent.Parent = ContentContainer
+
+        local TabUIListLayout = Instance.new("UIListLayout")
+        TabUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        TabUIListLayout.Padding = UDim.new(0, 10)
+        TabUIListLayout.Parent = TabContent
+
+        TabButton.MouseButton1Click:Connect(function()
+            if ActiveTab then
+                ActiveTab.Visible = false
+            end
+            TabContent.Visible = true
+            ActiveTab = TabContent
+            
+            -- Destacar botão ativo
+            for _, btn in pairs(TabContainer:GetChildren()) do
+                if btn:IsA("TextButton") then
+                    if btn == TabButton then
+                        btn.BackgroundColor3 = self.Themes.Default.Secondary
+                    else
+                        btn.BackgroundColor3 = self.Themes.Default.Main
+                    end
+                end
+            end
+        end)
+
+        local TabFunctions = {}
+
+        function TabFunctions:AddToggle(name, default, callback)
+            local ToggleContainer = Instance.new("Frame")
+            ToggleContainer.Name = "ToggleContainer"
+            ToggleContainer.Size = UDim2.new(1, 0, 0, 30)
+            ToggleContainer.BackgroundTransparency = 1
+            ToggleContainer.LayoutOrder = #TabContent:GetChildren()
+            ToggleContainer.Parent = TabContent
+
+            local ToggleLabel = Instance.new("TextLabel")
+            ToggleLabel.Name = "ToggleLabel"
+            ToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            ToggleLabel.Position = UDim2.new(0, 0, 0, 0)
+            ToggleLabel.BackgroundTransparency = 1
+            ToggleLabel.Text = name
+            ToggleLabel.TextColor3 = self.Themes.Default.Text
+            ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleLabel.Font = Enum.Font.Gotham
+            ToggleLabel.TextSize = 12
+            ToggleLabel.Parent = ToggleContainer
+
+            local ToggleBackground = Instance.new("Frame")
+            ToggleBackground.Name = "ToggleBackground"
+            ToggleBackground.Size = UDim2.new(0, 40, 0, 20)
+            ToggleBackground.Position = UDim2.new(1, -40, 0.5, -10)
+            ToggleBackground.AnchorPoint = Vector2.new(1, 0.5)
+            ToggleBackground.BackgroundColor3 = self.Themes.Default.Secondary
+            ToggleBackground.BorderSizePixel = 0
+            ToggleBackground.Parent = ToggleContainer
+
+            local ToggleCorner = Instance.new("UICorner")
+            ToggleCorner.CornerRadius = UDim.new(0, 10)
+            ToggleCorner.Parent = ToggleBackground
+
+            local ToggleIndicator = Instance.new("Frame")
+            ToggleIndicator.Name = "ToggleIndicator"
+            ToggleIndicator.Size = UDim2.new(0, 16, 0, 16)
+            ToggleIndicator.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            ToggleIndicator.AnchorPoint = Vector2.new(1, 0.5)
+            ToggleIndicator.BackgroundColor3 = self.CurrentTheme == "RGB" and self.Themes.RGB.Accent() or self.Themes.Default.Accent
+            ToggleIndicator.BorderSizePixel = 0
+            ToggleIndicator.Parent = ToggleBackground
+
+            local IndicatorCorner = Instance.new("UICorner")
+            IndicatorCorner.CornerRadius = UDim.new(0, 8)
+            IndicatorCorner.Parent = ToggleIndicator
+
+            local isToggled = default or false
+
+            ToggleBackground.MouseButton1Click:Connect(function()
+                isToggled = not isToggled
+                if isToggled then
+                    ToggleIndicator:TweenPosition(UDim2.new(1, -18, 0.5, -8), "Out", "Quad", 0.2, true)
+                else
+                    ToggleIndicator:TweenPosition(UDim2.new(0, 2, 0.5, -8), "Out", "Quad", 0.2, true)
+                end
+                if callback then
+                    callback(isToggled)
+                end
+            end)
+
+            if self.CurrentTheme == "RGB" then
+                coroutine.wrap(function()
+                    while ToggleIndicator and ToggleIndicator.Parent do
+                        ToggleIndicator.BackgroundColor3 = self.Themes.RGB.Accent()
+                        wait(0.1)
+                    end
+                end)()
+            end
+        end
+
+        function TabFunctions:AddDropdown(name, options, callback)
+            local DropdownContainer = Instance.new("Frame")
+            DropdownContainer.Name = "DropdownContainer"
+            DropdownContainer.Size = UDim2.new(1, 0, 0, 30)
+            DropdownContainer.BackgroundTransparency = 1
+            DropdownContainer.LayoutOrder = #TabContent:GetChildren()
+            DropdownContainer.Parent = TabContent
+
+            local DropdownLabel = Instance.new("TextLabel")
+            DropdownLabel.Name = "DropdownLabel"
+            DropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
+            DropdownLabel.Position = UDim2.new(0, 0, 0, 0)
+            DropdownLabel.BackgroundTransparency = 1
+            DropdownLabel.Text = name
+            DropdownLabel.TextColor3 = self.Themes.Default.Text
+            DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+            DropdownLabel.Font = Enum.Font.Gotham
+            DropdownLabel.TextSize = 12
+            DropdownLabel.Parent = DropdownContainer
+
+            local DropdownButton = Instance.new("TextButton")
+            DropdownButton.Name = "DropdownButton"
+            DropdownButton.Size = UDim2.new(0.5, 0, 1, 0)
+            DropdownButton.Position = UDim2.new(0.5, 0, 0, 0)
+            DropdownButton.BackgroundColor3 = self.Themes.Default.Secondary
+            DropdownButton.BorderSizePixel = 0
+            DropdownButton.Text = options[1] or "Select"
+            DropdownButton.TextColor3 = self.Themes.Default.Text
+            DropdownButton.Font = Enum.Font.Gotham
+            DropdownButton.TextSize = 12
+            DropdownButton.Parent = DropdownContainer
+
+            local DropdownCorner = Instance.new("UICorner")
+            DropdownCorner.CornerRadius = UDim.new(0, 4)
+            DropdownCorner.Parent = DropdownButton
+
+            local DropdownMenu = Instance.new("Frame")
+            DropdownMenu.Name = "DropdownMenu"
+            DropdownMenu.Size = UDim2.new(0.5, 0, 0, 0)
+            DropdownMenu.Position = UDim2.new(0.5, 0, 1, 5)
+            DropdownMenu.BackgroundColor3 = self.Themes.Default.Main
+            DropdownMenu.BorderSizePixel = 0
+            DropdownMenu.ClipsDescendants = true
+            DropdownMenu.Visible = false
+            DropdownMenu.Parent = DropdownContainer
+
+            local MenuCorner = Instance.new("UICorner")
+            MenuCorner.CornerRadius = UDim.new(0, 4)
+            MenuCorner.Parent = DropdownMenu
+
+            local MenuUIListLayout = Instance.new("UIListLayout")
+            MenuUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            MenuUIListLayout.Parent = DropdownMenu
+
+            local isOpen = false
+
+            DropdownButton.MouseButton1Click:Connect(function()
+                isOpen = not isOpen
+                DropdownMenu.Visible = isOpen
+                if isOpen then
+                    DropdownMenu:TweenSize(UDim2.new(0.5, 0, 0, #options * 30), "Out", "Quad", 0.2, true)
+                else
+                    DropdownMenu:TweenSize(UDim2.new(0.5, 0, 0, 0), "Out", "Quad", 0.2, true)
+                end
+            end)
+
+            for i, option in ipairs(options) do
+                local OptionButton = Instance.new("TextButton")
+                OptionButton.Name = "Option_" .. option
+                OptionButton.Size = UDim2.new(1, 0, 0, 30)
+                OptionButton.BackgroundColor3 = self.Themes.Default.Secondary
+                OptionButton.BorderSizePixel = 0
+                OptionButton.Text = option
+                OptionButton.TextColor3 = self.Themes.Default.Text
+                OptionButton.Font = Enum.Font.Gotham
+                OptionButton.TextSize = 12
+                OptionButton.LayoutOrder = i
+                OptionButton.Parent = DropdownMenu
+
+                OptionButton.MouseButton1Click:Connect(function()
+                    DropdownButton.Text = option
+                    isOpen = false
+                    DropdownMenu.Visible = false
+                    DropdownMenu.Size = UDim2.new(0.5, 0, 0, 0)
+                    if callback then
+                        callback(option)
+                    end
+                end)
+            end
+        end
+
+        function TabFunctions:AddParagraph(text)
+            local ParagraphContainer = Instance.new("Frame")
+            ParagraphContainer.Name = "ParagraphContainer"
+            ParagraphContainer.Size = UDim2.new(1, 0, 0, 0)
+            ParagraphContainer.AutomaticSize = Enum.AutomaticSize.Y
+            ParagraphContainer.BackgroundTransparency = 1
+            ParagraphContainer.LayoutOrder = #TabContent:GetChildren()
+            ParagraphContainer.Parent = TabContent
+
+            local ParagraphText = Instance.new("TextLabel")
+            ParagraphText.Name = "ParagraphText"
+            ParagraphText.Size = UDim2.new(1, 0, 0, 0)
+            ParagraphText.AutomaticSize = Enum.AutomaticSize.Y
+            ParagraphText.BackgroundTransparency = 1
+            ParagraphText.Text = text
+            ParagraphText.TextColor3 = self.Themes.Default.Text
+            ParagraphText.TextWrapped = true
+            ParagraphText.TextXAlignment = Enum.TextXAlignment.Left
+            ParagraphText.Font = Enum.Font.Gotham
+            ParagraphText.TextSize = 12
+            ParagraphText.Parent = ParagraphContainer
+        end
+
+        function TabFunctions:AddButton(name, callback)
+            local Button = Instance.new("TextButton")
+            Button.Name = "Button"
+            Button.Size = UDim2.new(1, 0, 0, 30)
+            Button.BackgroundColor3 = self.CurrentTheme == "RGB" and self.Themes.RGB.Accent() or self.Themes.Default.Accent
+            Button.BorderSizePixel = 0
+            Button.Text = name
+            Button.TextColor3 = self.Themes.Default.Text
+            Button.Font = Enum.Font.Gotham
+            Button.TextSize = 12
+            Button.LayoutOrder = #TabContent:GetChildren()
+            Button.Parent = TabContent
+
+            local ButtonCorner = Instance.new("UICorner")
+            ButtonCorner.CornerRadius = UDim.new(0, 4)
+            ButtonCorner.Parent = Button
+
+            Button.MouseButton1Click:Connect(function()
+                if callback then
+                    callback()
+                end
+            end)
+
+            if self.CurrentTheme == "RGB" then
+                coroutine.wrap(function()
+                    while Button and Button.Parent do
+                        Button.BackgroundColor3 = self.Themes.RGB.Accent()
+                        wait(0.1)
+                    end
+                end)()
+            end
+        end
+
+        return TabFunctions
+    end
+
+    return Tabs
+end
+
+return Library
