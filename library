@@ -1,12 +1,14 @@
 -- Fluent UI Library by: CursedZed
--- Versão: 2.0 Premium
+-- Versão: 2.1 - Com Drag no Ícone
+-- Corrigido: TweenService + Movimento do Ícone
 
 local FluentLibrary = {}
-local TweenService = game:GetService("TweenService") -- ADICIONE ESTA LINHA!
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Configurações
 FluentLibrary.Settings = {
-    DefaultPosition = UDim2.new(0.8, -350, 0.5, -175),
+    DefaultPosition = UDim2.new(0.02, 0, 0.8, 0),
     IconSize = UDim2.new(0, 50, 0, 50),
     AnimationSpeed = 0.3,
     ThemeColors = {
@@ -20,7 +22,11 @@ FluentLibrary.Settings = {
     }
 }
 
--- Função Tween CORRIGIDA
+FluentLibrary.CurrentTheme = "Dark"
+FluentLibrary.Visible = false
+FluentLibrary.Windows = {}
+
+-- Função Tween corrigida
 function FluentLibrary:Tween(object, properties, duration)
     local tweenInfo = TweenInfo.new(
         duration or self.Settings.AnimationSpeed, 
@@ -32,19 +38,7 @@ function FluentLibrary:Tween(object, properties, duration)
     return tween
 end
 
-FluentLibrary.CurrentTheme = "Dark"
-FluentLibrary.Visible = false
-FluentLibrary.Windows = {}
-
--- Animação suave
-function FluentLibrary:Tween(object, properties, duration)
-    local tweenInfo = TweenInfo.new(duration or self.Settings.AnimationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local tween = game:GetService("TweenService"):Create(object, tweenInfo, properties)
-    tween:Play()
-    return tween
-end
-
--- Criar ícone flutuante
+-- Criar ícone flutuante com drag
 function FluentLibrary:CreateFloatingIcon()
     local iconGui = Instance.new("ScreenGui")
     iconGui.Name = "FluentIcon"
@@ -54,10 +48,10 @@ function FluentLibrary:CreateFloatingIcon()
     local iconButton = Instance.new("ImageButton")
     iconButton.Name = "FloatingIcon"
     iconButton.Size = self.Settings.IconSize
-    iconButton.Position = UDim2.new(0.02, 0, 0.8, 0)
+    iconButton.Position = self.Settings.DefaultPosition
     iconButton.AnchorPoint = Vector2.new(0, 0.5)
     iconButton.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Accent
-    iconButton.Image = "rbxassetid://10734948210" -- Ícone moderno
+    iconButton.Image = "rbxassetid://10734948210"
     iconButton.ScaleType = Enum.ScaleType.Fit
     iconButton.BorderSizePixel = 0
     iconButton.Parent = iconGui
@@ -66,17 +60,45 @@ function FluentLibrary:CreateFloatingIcon()
     iconCorner.CornerRadius = UDim.new(0, 12)
     iconCorner.Parent = iconButton
 
-    local iconShadow = Instance.new("ImageLabel")
-    iconShadow.Size = UDim2.new(1, 10, 1, 10)
-    iconShadow.Position = UDim2.new(0, -5, 0, -5)
-    iconShadow.Image = "rbxassetid://8577636384" -- Sombra suave
-    iconShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    iconShadow.ImageTransparency = 0.8
-    iconShadow.ScaleType = Enum.ScaleType.Slice
-    iconShadow.SliceCenter = Rect.new(10, 10, 118, 118)
-    iconShadow.BackgroundTransparency = 1
-    iconShadow.ZIndex = iconButton.ZIndex - 1
-    iconShadow.Parent = iconButton
+    -- Sistema de Drag para o ícone
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        iconButton.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+
+    iconButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = iconButton.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    iconButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            update(input)
+        end
+    end)
 
     -- Animação de hover
     iconButton.MouseEnter:Connect(function()
@@ -90,8 +112,8 @@ function FluentLibrary:CreateFloatingIcon()
     return iconButton, iconGui
 end
 
--- Criar janela principal
-function FluentLibrary:CreateWindow(name, icon)
+-- Criar janela principal (função corrigida)
+function FluentLibrary:CreateWindow(name)
     local window = {}
     window.Name = name
 
@@ -103,28 +125,12 @@ function FluentLibrary:CreateWindow(name, icon)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 400, 0, 450)
-    mainFrame.Position = self.Settings.DefaultPosition
+    mainFrame.Position = UDim2.new(0.8, -350, 0.5, -175)
     mainFrame.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Primary
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
     mainFrame.Visible = false
     mainFrame.Parent = screenGui
-
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 14)
-    mainCorner.Parent = mainFrame
-
-    local mainShadow = Instance.new("ImageLabel")
-    mainShadow.Size = UDim2.new(1, 20, 1, 20)
-    mainShadow.Position = UDim2.new(0, -10, 0, -10)
-    mainShadow.Image = "rbxassetid://8577636384"
-    mainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    mainShadow.ImageTransparency = 0.9
-    mainShadow.ScaleType = Enum.ScaleType.Slice
-    mainShadow.SliceCenter = Rect.new(10, 10, 118, 118)
-    mainShadow.BackgroundTransparency = 1
-    mainShadow.ZIndex = mainFrame.ZIndex - 1
-    mainShadow.Parent = mainFrame
 
     -- Header
     local header = Instance.new("Frame")
@@ -133,10 +139,6 @@ function FluentLibrary:CreateWindow(name, icon)
     header.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
     header.BorderSizePixel = 0
     header.Parent = mainFrame
-
-    local headerCorner = Instance.new("UICorner")
-    headerCorner.CornerRadius = UDim.new(0, 14)
-    headerCorner.Parent = header
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
@@ -156,7 +158,7 @@ function FluentLibrary:CreateWindow(name, icon)
     closeButton.Position = UDim2.new(1, -35, 0.5, -15)
     closeButton.AnchorPoint = Vector2.new(1, 0.5)
     closeButton.BackgroundTransparency = 1
-    closeButton.Image = "rbxassetid://10734947760" -- Ícone X
+    closeButton.Image = "rbxassetid://10734947760"
     closeButton.ImageColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
     closeButton.Parent = header
 
@@ -167,11 +169,6 @@ function FluentLibrary:CreateWindow(name, icon)
     tabContainer.Position = UDim2.new(0, 10, 0, 45)
     tabContainer.BackgroundTransparency = 1
     tabContainer.Parent = mainFrame
-
-    local tabListLayout = Instance.new("UIListLayout")
-    tabListLayout.FillDirection = Enum.FillDirection.Horizontal
-    tabListLayout.Padding = UDim.new(0, 5)
-    tabListLayout.Parent = tabContainer
 
     -- Content
     local contentContainer = Instance.new("Frame")
@@ -188,45 +185,33 @@ function FluentLibrary:CreateWindow(name, icon)
     window.Tabs = {}
     window.ActiveTab = nil
 
-    -- Funções da janela
+    -- Função Toggle CORRIGIDA
     function window:Toggle()
         self.MainFrame.Visible = not self.MainFrame.Visible
         if self.MainFrame.Visible then
             self.MainFrame.Size = UDim2.new(0, 0, 0, 0)
-            self:Tween(self.MainFrame, {Size = UDim2.new(0, 400, 0, 450)})
+            FluentLibrary:Tween(self.MainFrame, {Size = UDim2.new(0, 400, 0, 450)})
+        else
+            FluentLibrary:Tween(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)})
         end
     end
 
-    function window:Close()
-        self:Tween(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)})
-        wait(self.Settings.AnimationSpeed)
-        self.MainFrame.Visible = false
-    end
-
     closeButton.MouseButton1Click:Connect(function()
-        window:Close()
+        window:Toggle()
     end)
 
     table.insert(self.Windows, window)
     return window
 end
 
--- Dropdown com search
+-- Função para criar dropdown com search (simplificada)
 function FluentLibrary:CreateSearchDropdown(options, parent)
-    local dropdown = {}
-    dropdown.Options = options
-    dropdown.Selected = nil
-
     local dropdownFrame = Instance.new("Frame")
     dropdownFrame.Name = "SearchDropdown"
     dropdownFrame.Size = UDim2.new(1, 0, 0, 35)
     dropdownFrame.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
     dropdownFrame.BorderSizePixel = 0
     dropdownFrame.Parent = parent
-
-    local dropdownCorner = Instance.new("UICorner")
-    dropdownCorner.CornerRadius = UDim.new(0, 8)
-    dropdownCorner.Parent = dropdownFrame
 
     local searchBox = Instance.new("TextBox")
     searchBox.Name = "SearchBox"
@@ -241,94 +226,11 @@ function FluentLibrary:CreateSearchDropdown(options, parent)
     searchBox.TextXAlignment = Enum.TextXAlignment.Left
     searchBox.Parent = dropdownFrame
 
-    local dropdownButton = Instance.new("ImageButton")
-    dropdownButton.Name = "DropdownButton"
-    dropdownButton.Size = UDim2.new(0, 30, 0, 30)
-    dropdownButton.Position = UDim2.new(1, -35, 0.5, -15)
-    dropdownButton.AnchorPoint = Vector2.new(1, 0.5)
-    dropdownButton.BackgroundTransparency = 1
-    dropdownButton.Image = "rbxassetid://10734948532" -- Ícone dropdown
-    dropdownButton.ImageColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
-    dropdownButton.Parent = dropdownFrame
-
-    local dropdownMenu = Instance.new("ScrollingFrame")
-    dropdownMenu.Name = "DropdownMenu"
-    dropdownMenu.Size = UDim2.new(1, 0, 0, 150)
-    dropdownMenu.Position = UDim2.new(0, 0, 1, 5)
-    dropdownMenu.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
-    dropdownMenu.BorderSizePixel = 0
-    dropdownMenu.ScrollBarThickness = 5
-    dropdownMenu.Visible = false
-    dropdownMenu.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    dropdownMenu.Parent = dropdownFrame
-
-    local menuListLayout = Instance.new("UIListLayout")
-    menuListLayout.Parent = dropdownMenu
-
-    local isOpen = false
-
-    local function updateDropdown(filter)
-        filter = filter and filter:lower() or ""
-        
-        -- Ordenar opções alfabeticamente
-        local sortedOptions = {}
-        for _, option in ipairs(dropdown.Options) do
-            table.insert(sortedOptions, option)
-        end
-        table.sort(sortedOptions)
-        
-        -- Limpar menu atual
-        for _, child in ipairs(dropdownMenu:GetChildren()) do
-            if child:IsA("TextButton") then
-                child:Destroy()
-            end
-        end
-
-        -- Adicionar opções filtradas e ordenadas
-        for _, option in ipairs(sortedOptions) do
-            if option:lower():find(filter) then
-                local optionButton = Instance.new("TextButton")
-                optionButton.Size = UDim2.new(1, -10, 0, 30)
-                optionButton.Position = UDim2.new(0, 5, 0, 0)
-                optionButton.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Primary
-                optionButton.BorderSizePixel = 0
-                optionButton.Text = option
-                optionButton.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
-                optionButton.Font = Enum.Font.Gotham
-                optionButton.TextSize = 12
-                optionButton.Parent = dropdownMenu
-
-                optionButton.MouseButton1Click:Connect(function()
-                    searchBox.Text = option
-                    dropdown.Selected = option
-                    dropdownMenu.Visible = false
-                    isOpen = false
-                end)
-            end
-        end
-    end
-
-    dropdownButton.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        dropdownMenu.Visible = isOpen
-        if isOpen then
-            updateDropdown()
-        end
-    end)
-
-    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        updateDropdown(searchBox.Text)
-    end)
-
-    updateDropdown()
-    return dropdown
+    return dropdownFrame
 end
 
--- Sistema de tabs
+-- Função para criar tab
 function FluentLibrary:CreateTab(window, name)
-    local tab = {}
-    tab.Name = name
-
     local tabButton = Instance.new("TextButton")
     tabButton.Name = "TabButton_" .. name
     tabButton.Size = UDim2.new(0, 80, 1, 0)
@@ -351,10 +253,6 @@ function FluentLibrary:CreateTab(window, name)
     tabContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
     tabContent.Parent = window.ContentContainer
 
-    local contentListLayout = Instance.new("UIListLayout")
-    contentListLayout.Padding = UDim.new(0, 10)
-    contentListLayout.Parent = tabContent
-
     tabButton.MouseButton1Click:Connect(function()
         if window.ActiveTab then
             window.ActiveTab.Visible = false
@@ -362,6 +260,9 @@ function FluentLibrary:CreateTab(window, name)
         tabContent.Visible = true
         window.ActiveTab = tabContent
     end)
+
+    local tab = {}
+    tab.Content = tabContent
 
     function tab:AddButton(name, callback)
         local button = Instance.new("TextButton")
@@ -374,10 +275,6 @@ function FluentLibrary:CreateTab(window, name)
         button.Font = Enum.Font.GothamSemibold
         button.TextSize = 13
         button.Parent = tabContent
-
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 8)
-        buttonCorner.Parent = button
 
         button.MouseButton1Click:Connect(callback)
         return button
@@ -402,11 +299,6 @@ function FluentLibrary:CreateTab(window, name)
         dropdownLabel.Parent = dropdownContainer
 
         local dropdown = FluentLibrary:CreateSearchDropdown(options, dropdownContainer)
-        
-        if callback then
-            dropdown.OnSelected = callback
-        end
-
         return dropdown
     end
 
