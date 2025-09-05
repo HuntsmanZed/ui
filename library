@@ -1,10 +1,9 @@
 -- Fluent UI Library by: CursedZed
--- Versão: 2.1 - Com Drag no Ícone
--- Corrigido: TweenService + Movimento do Ícone
-
+-- Versão: 3.0 - Completa com todas as funções
 local FluentLibrary = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 -- Configurações
 FluentLibrary.Settings = {
@@ -22,20 +21,140 @@ FluentLibrary.Settings = {
     }
 }
 
+-- Variáveis globais
 FluentLibrary.CurrentTheme = "Dark"
-FluentLibrary.Visible = false
 FluentLibrary.Windows = {}
+FluentLibrary.FlyEnabled = false
+FluentLibrary.NoclipEnabled = false
+FluentLibrary.FlySpeed = 1
+FluentLibrary.PlayerStats = {
+    WalkSpeed = 16,
+    JumpPower = 50
+}
 
--- Função Tween corrigida
+-- Função Tween
 function FluentLibrary:Tween(object, properties, duration)
-    local tweenInfo = TweenInfo.new(
-        duration or self.Settings.AnimationSpeed, 
-        Enum.EasingStyle.Quad, 
-        Enum.EasingDirection.Out
-    )
+    local tweenInfo = TweenInfo.new(duration or self.Settings.AnimationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local tween = TweenService:Create(object, tweenInfo, properties)
     tween:Play()
     return tween
+end
+
+-- Sistema Fly
+function FluentLibrary:ToggleFly()
+    self.FlyEnabled = not self.FlyEnabled
+    
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end
+    
+    if self.FlyEnabled then
+        local humanoid = character:FindFirstChild("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        
+        if humanoid and rootPart then
+            humanoid.PlatformStand = true
+            
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            bodyVelocity.MaxForce = Vector3.new(40000, 40000, 40000)
+            bodyVelocity.P = 1000
+            bodyVelocity.Name = "FlyVelocity"
+            bodyVelocity.Parent = rootPart
+
+            local flyConnection
+            flyConnection = RunService.Heartbeat:Connect(function()
+                if not self.FlyEnabled or not character.Parent then
+                    flyConnection:Disconnect()
+                    return
+                end
+                
+                local camera = workspace.CurrentCamera
+                local direction = Vector3.new()
+                
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction -= camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction -= camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction += Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then direction -= Vector3.new(0, 1, 0) end
+                
+                if direction.Magnitude > 0 then
+                    direction = direction.Unit * 50 * self.FlySpeed
+                end
+                
+                if rootPart:FindFirstChild("FlyVelocity") then
+                    rootPart.FlyVelocity.Velocity = direction
+                end
+            end)
+        end
+    else
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.PlatformStand = false
+        end
+        
+        local flyVelocity = character:FindFirstChild("FlyVelocity")
+        if flyVelocity then flyVelocity:Destroy() end
+    end
+end
+
+-- Sistema Noclip
+function FluentLibrary:ToggleNoclip()
+    self.NoclipEnabled = not self.NoclipEnabled
+    
+    local character = game.Players.LocalPlayer.Character
+    if not character then return end
+    
+    if self.NoclipEnabled then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    else
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+-- Sistema de Movimento para UI e Ícone
+function FluentLibrary:MakeDraggable(frame, handle)
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            update(input)
+        end
+    end)
 end
 
 -- Criar ícone flutuante com drag
@@ -56,51 +175,8 @@ function FluentLibrary:CreateFloatingIcon()
     iconButton.BorderSizePixel = 0
     iconButton.Parent = iconGui
 
-    local iconCorner = Instance.new("UICorner")
-    iconCorner.CornerRadius = UDim.new(0, 12)
-    iconCorner.Parent = iconButton
+    self:MakeDraggable(iconButton, iconButton)
 
-    -- Sistema de Drag para o ícone
-    local dragging = false
-    local dragInput, dragStart, startPos
-
-    local function update(input)
-        local delta = input.Position - dragStart
-        iconButton.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-
-    iconButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = iconButton.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    iconButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            update(input)
-        end
-    end)
-
-    -- Animação de hover
     iconButton.MouseEnter:Connect(function()
         self:Tween(iconButton, {Size = self.Settings.IconSize + UDim2.new(0, 5, 0, 5)})
     end)
@@ -112,10 +188,11 @@ function FluentLibrary:CreateFloatingIcon()
     return iconButton, iconGui
 end
 
--- Criar janela principal (função corrigida)
+-- Criar janela principal com minimize
 function FluentLibrary:CreateWindow(name)
     local window = {}
     window.Name = name
+    window.Minimized = false
 
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = name .. "Window"
@@ -125,111 +202,116 @@ function FluentLibrary:CreateWindow(name)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 400, 0, 450)
-    mainFrame.Position = UDim2.new(0.8, -350, 0.5, -175)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -225)
     mainFrame.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Primary
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
     mainFrame.Visible = false
     mainFrame.Parent = screenGui
 
-    -- Header
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 40)
+    header.Size = UDim2.new(1, 0, 0, 30)
     header.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
     header.BorderSizePixel = 0
     header.Parent = mainFrame
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(1, -50, 1, 0)
-    title.Position = UDim2.new(0, 15, 0, 0)
+    title.Size = UDim2.new(1, -80, 1, 0)
+    title.Position = UDim2.new(0, 10, 0, 0)
     title.BackgroundTransparency = 1
     title.Text = name
     title.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Font = Enum.Font.GothamSemibold
-    title.TextSize = 16
+    title.TextSize = 14
     title.Parent = header
 
-    local closeButton = Instance.new("ImageButton")
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Name = "MinimizeButton"
+    minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    minimizeButton.Position = UDim2.new(1, -70, 0.5, -15)
+    minimizeButton.AnchorPoint = Vector2.new(1, 0.5)
+    minimizeButton.BackgroundTransparency = 1
+    minimizeButton.Text = "_"
+    minimizeButton.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    minimizeButton.Font = Enum.Font.GothamBold
+    minimizeButton.TextSize = 16
+    minimizeButton.Parent = header
+
+    local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
     closeButton.Position = UDim2.new(1, -35, 0.5, -15)
     closeButton.AnchorPoint = Vector2.new(1, 0.5)
     closeButton.BackgroundTransparency = 1
-    closeButton.Image = "rbxassetid://10734947760"
-    closeButton.ImageColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    closeButton.Text = "X"
+    closeButton.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    closeButton.Font = Enum.Font.Gotham
+    closeButton.TextSize = 14
     closeButton.Parent = header
 
-    -- Tabs
     local tabContainer = Instance.new("Frame")
     tabContainer.Name = "TabContainer"
-    tabContainer.Size = UDim2.new(1, -20, 0, 35)
-    tabContainer.Position = UDim2.new(0, 10, 0, 45)
+    tabContainer.Size = UDim2.new(1, -20, 0, 30)
+    tabContainer.Position = UDim2.new(0, 10, 0, 35)
     tabContainer.BackgroundTransparency = 1
     tabContainer.Parent = mainFrame
 
-    -- Content
     local contentContainer = Instance.new("Frame")
     contentContainer.Name = "ContentContainer"
-    contentContainer.Size = UDim2.new(1, -20, 1, -90)
-    contentContainer.Position = UDim2.new(0, 10, 0, 85)
+    contentContainer.Size = UDim2.new(1, -20, 1, -75)
+    contentContainer.Position = UDim2.new(0, 10, 0, 70)
     contentContainer.BackgroundTransparency = 1
     contentContainer.Parent = mainFrame
+
+    self:MakeDraggable(mainFrame, header)
+
+    function window:Toggle()
+        self.MainFrame.Visible = not self.MainFrame.Visible
+        if self.MainFrame.Visible and self.Minimized then
+            self:Restore()
+        end
+    end
+
+    function window:Minimize()
+        self.Minimized = true
+        self:Tween(self.MainFrame, {Size = UDim2.new(0, 400, 0, 30)})
+        contentContainer.Visible = false
+        tabContainer.Visible = false
+    end
+
+    function window:Restore()
+        self.Minimized = false
+        self:Tween(self.MainFrame, {Size = UDim2.new(0, 400, 0, 450)})
+        contentContainer.Visible = true
+        tabContainer.Visible = true
+    end
+
+    minimizeButton.MouseButton1Click:Connect(function()
+        if window.Minimized then
+            window:Restore()
+        else
+            window:Minimize()
+        end
+    end)
+
+    closeButton.MouseButton1Click:Connect(function()
+        window.MainFrame.Visible = false
+    end)
 
     window.Gui = screenGui
     window.MainFrame = mainFrame
     window.TabContainer = tabContainer
     window.ContentContainer = contentContainer
     window.Tabs = {}
-    window.ActiveTab = nil
-
-    -- Função Toggle CORRIGIDA
-    function window:Toggle()
-        self.MainFrame.Visible = not self.MainFrame.Visible
-        if self.MainFrame.Visible then
-            self.MainFrame.Size = UDim2.new(0, 0, 0, 0)
-            FluentLibrary:Tween(self.MainFrame, {Size = UDim2.new(0, 400, 0, 450)})
-        else
-            FluentLibrary:Tween(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)})
-        end
-    end
-
-    closeButton.MouseButton1Click:Connect(function()
-        window:Toggle()
-    end)
 
     table.insert(self.Windows, window)
     return window
 end
 
--- Função para criar dropdown com search (simplificada)
-function FluentLibrary:CreateSearchDropdown(options, parent)
-    local dropdownFrame = Instance.new("Frame")
-    dropdownFrame.Name = "SearchDropdown"
-    dropdownFrame.Size = UDim2.new(1, 0, 0, 35)
-    dropdownFrame.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
-    dropdownFrame.BorderSizePixel = 0
-    dropdownFrame.Parent = parent
-
-    local searchBox = Instance.new("TextBox")
-    searchBox.Name = "SearchBox"
-    searchBox.Size = UDim2.new(1, -40, 1, 0)
-    searchBox.Position = UDim2.new(0, 10, 0, 0)
-    searchBox.BackgroundTransparency = 1
-    searchBox.PlaceholderText = "Pesquisar..."
-    searchBox.Text = ""
-    searchBox.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
-    searchBox.Font = Enum.Font.Gotham
-    searchBox.TextSize = 12
-    searchBox.TextXAlignment = Enum.TextXAlignment.Left
-    searchBox.Parent = dropdownFrame
-
-    return dropdownFrame
-end
-
--- Função para criar tab
+-- Criar tab
 function FluentLibrary:CreateTab(window, name)
     local tabButton = Instance.new("TextButton")
     tabButton.Name = "TabButton_" .. name
@@ -254,19 +336,87 @@ function FluentLibrary:CreateTab(window, name)
     tabContent.Parent = window.ContentContainer
 
     tabButton.MouseButton1Click:Connect(function()
-        if window.ActiveTab then
-            window.ActiveTab.Visible = false
+        for _, tab in pairs(window.Tabs) do
+            tab.Content.Visible = false
         end
         tabContent.Visible = true
-        window.ActiveTab = tabContent
     end)
 
     local tab = {}
     tab.Content = tabContent
 
+    function tab:AddToggle(name, default, callback)
+        local toggleFrame = Instance.new("Frame")
+        toggleFrame.Size = UDim2.new(1, 0, 0, 30)
+        toggleFrame.BackgroundTransparency = 1
+        toggleFrame.Parent = tabContent
+
+        local toggleLabel = Instance.new("TextLabel")
+        toggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+        toggleLabel.BackgroundTransparency = 1
+        toggleLabel.Text = name
+        toggleLabel.TextColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Text
+        toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        toggleLabel.Font = Enum.Font.Gotham
+        toggleLabel.TextSize = 12
+        toggleLabel.Parent = toggleFrame
+
+        local toggleButton = Instance.new("TextButton")
+        toggleButton.Size = UDim2.new(0, 40, 0, 20)
+        toggleButton.Position = UDim2.new(1, -40, 0.5, -10)
+        toggleButton.AnchorPoint = Vector2.new(1, 0.5)
+        toggleButton.BackgroundColor3 = default and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        toggleButton.BorderSizePixel = 0
+        toggleButton.Text = ""
+        toggleButton.Parent = toggleFrame
+
+        local isToggled = default
+
+        toggleButton.MouseButton1Click:Connect(function()
+            isToggled = not isToggled
+            toggleButton.BackgroundColor3 = isToggled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+            if callback then callback(isToggled) end
+        end)
+
+        return toggleButton
+    end
+
+    function tab:AddDropdown(name, options, callback)
+        local dropdownFrame = Instance.new("Frame")
+        dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
+        dropdownFrame.BackgroundTransparency = 1
+        dropdownFrame.Parent = tabContent
+
+        local dropdownLabel = Instance.new("TextLabel")
+        dropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
+        dropdownLabel.BackgroundTransparency = 1
+        dropdownLabel.Text = name
+        dropdownLabel.TextColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Text
+        dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+        dropdownLabel.Font = Enum.Font.Gotham
+        dropdownLabel.TextSize = 12
+        dropdownLabel.Parent = dropdownFrame
+
+        local dropdownButton = Instance.new("TextButton")
+        dropdownButton.Size = UDim2.new(0.4, 0, 1, 0)
+        dropdownButton.Position = UDim2.new(0.6, 0, 0, 0)
+        dropdownButton.BackgroundColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Secondary
+        dropdownButton.BorderSizePixel = 0
+        dropdownButton.Text = "Selecionar"
+        dropdownButton.TextColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Text
+        dropdownButton.Font = Enum.Font.Gotham
+        dropdownButton.TextSize = 12
+        dropdownButton.Parent = dropdownFrame
+
+        dropdownButton.MouseButton1Click:Connect(function()
+            if callback then callback(dropdownButton.Text) end
+        end)
+
+        return dropdownButton
+    end
+
     function tab:AddButton(name, callback)
         local button = Instance.new("TextButton")
-        button.Name = "Button_" .. name
         button.Size = UDim2.new(1, 0, 0, 35)
         button.BackgroundColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Accent
         button.BorderSizePixel = 0
@@ -280,26 +430,38 @@ function FluentLibrary:CreateTab(window, name)
         return button
     end
 
-    function tab:AddDropdown(name, options, callback)
-        local dropdownContainer = Instance.new("Frame")
-        dropdownContainer.Name = "DropdownContainer_" .. name
-        dropdownContainer.Size = UDim2.new(1, 0, 0, 35)
-        dropdownContainer.BackgroundTransparency = 1
-        dropdownContainer.Parent = tabContent
+    function tab:AddSlider(name, min, max, default, callback)
+        local sliderFrame = Instance.new("Frame")
+        sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+        sliderFrame.BackgroundTransparency = 1
+        sliderFrame.Parent = tabContent
 
-        local dropdownLabel = Instance.new("TextLabel")
-        dropdownLabel.Name = "DropdownLabel"
-        dropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
-        dropdownLabel.BackgroundTransparency = 1
-        dropdownLabel.Text = name
-        dropdownLabel.TextColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Text
-        dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-        dropdownLabel.Font = Enum.Font.Gotham
-        dropdownLabel.TextSize = 12
-        dropdownLabel.Parent = dropdownContainer
+        local sliderLabel = Instance.new("TextLabel")
+        sliderLabel.Size = UDim2.new(1, 0, 0, 20)
+        sliderLabel.BackgroundTransparency = 1
+        sliderLabel.Text = name .. ": " .. default
+        sliderLabel.TextColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Text
+        sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+        sliderLabel.Font = Enum.Font.Gotham
+        sliderLabel.TextSize = 12
+        sliderLabel.Parent = sliderFrame
 
-        local dropdown = FluentLibrary:CreateSearchDropdown(options, dropdownContainer)
-        return dropdown
+        local sliderTrack = Instance.new("Frame")
+        sliderTrack.Size = UDim2.new(1, 0, 0, 5)
+        sliderTrack.Position = UDim2.new(0, 0, 0, 25)
+        sliderTrack.BackgroundColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Secondary
+        sliderTrack.BorderSizePixel = 0
+        sliderTrack.Parent = sliderFrame
+
+        local sliderButton = Instance.new("TextButton")
+        sliderButton.Size = UDim2.new(0, 15, 0, 15)
+        sliderButton.Position = UDim2.new((default - min) / (max - min), -7, 0, 20)
+        sliderButton.BackgroundColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Accent
+        sliderButton.BorderSizePixel = 0
+        sliderButton.Text = ""
+        sliderButton.Parent = sliderFrame
+
+        return sliderButton
     end
 
     window.Tabs[name] = tab
