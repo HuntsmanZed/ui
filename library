@@ -2,6 +2,7 @@
 -- Versão: 2.0 Premium
 
 local FluentLibrary = {}
+local TweenService = game:GetService("TweenService") -- ADICIONE ESTA LINHA!
 
 -- Configurações
 FluentLibrary.Settings = {
@@ -15,16 +16,21 @@ FluentLibrary.Settings = {
             Accent = Color3.fromRGB(0, 120, 215),
             Text = Color3.fromRGB(240, 240, 240),
             Hover = Color3.fromRGB(60, 60, 65)
-        },
-        Light = {
-            Primary = Color3.fromRGB(240, 240, 245),
-            Secondary = Color3.fromRGB(225, 225, 230),
-            Accent = Color3.fromRGB(0, 120, 215),
-            Text = Color3.fromRGB(30, 30, 35),
-            Hover = Color3.fromRGB(210, 210, 215)
         }
     }
 }
+
+-- Função Tween CORRIGIDA
+function FluentLibrary:Tween(object, properties, duration)
+    local tweenInfo = TweenInfo.new(
+        duration or self.Settings.AnimationSpeed, 
+        Enum.EasingStyle.Quad, 
+        Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(object, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
 
 FluentLibrary.CurrentTheme = "Dark"
 FluentLibrary.Visible = false
