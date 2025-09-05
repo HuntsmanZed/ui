@@ -1,409 +1,411 @@
-local Library = {}
+-- Fluent UI Library by: Seu Nome
+-- Versão: 2.0 Premium
 
--- Configurações padrão
-Library.Themes = {
-    Default = {
-        Main = Color3.fromRGB(30, 30, 30),      -- Preto
-        Secondary = Color3.fromRGB(50, 50, 50), -- Cinza escuro
-        Text = Color3.fromRGB(220, 220, 220),   -- Cinza claro
-        Accent = Color3.fromRGB(180, 0, 0)      -- Vermelho escuro
-    },
-    RGB = {
-        Main = Color3.fromRGB(30, 30, 30),      -- Preto (mantido)
-        Secondary = Color3.fromRGB(50, 50, 50), -- Cinza escuro (mantido)
-        Text = Color3.fromRGB(220, 220, 220),   -- Cinza claro (mantido)
-        Accent = function()
-            return Color3.fromHSV(tick() % 5 / 5, 1, 1) -- Cor RGB que muda
-        end
+local FluentLibrary = {}
+
+-- Configurações
+FluentLibrary.Settings = {
+    DefaultPosition = UDim2.new(0.8, -350, 0.5, -175),
+    IconSize = UDim2.new(0, 50, 0, 50),
+    AnimationSpeed = 0.3,
+    ThemeColors = {
+        Dark = {
+            Primary = Color3.fromRGB(30, 30, 35),
+            Secondary = Color3.fromRGB(45, 45, 50),
+            Accent = Color3.fromRGB(0, 120, 215),
+            Text = Color3.fromRGB(240, 240, 240),
+            Hover = Color3.fromRGB(60, 60, 65)
+        },
+        Light = {
+            Primary = Color3.fromRGB(240, 240, 245),
+            Secondary = Color3.fromRGB(225, 225, 230),
+            Accent = Color3.fromRGB(0, 120, 215),
+            Text = Color3.fromRGB(30, 30, 35),
+            Hover = Color3.fromRGB(210, 210, 215)
+        }
     }
 }
 
-Library.CurrentTheme = "Default"
+FluentLibrary.CurrentTheme = "Dark"
+FluentLibrary.Visible = false
+FluentLibrary.Windows = {}
 
--- Função para criar elementos de UI
-function Library:CreateWindow(name)
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = name
-    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- Animação suave
+function FluentLibrary:Tween(object, properties, duration)
+    local tweenInfo = TweenInfo.new(duration or self.Settings.AnimationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = game:GetService("TweenService"):Create(object, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
 
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 450, 0, 350)
-    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
-    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    MainFrame.BackgroundColor3 = self.Themes.Default.Main
-    MainFrame.BorderSizePixel = 0
-    MainFrame.ClipsDescendants = true
-    MainFrame.Parent = ScreenGui
+-- Criar ícone flutuante
+function FluentLibrary:CreateFloatingIcon()
+    local iconGui = Instance.new("ScreenGui")
+    iconGui.Name = "FluentIcon"
+    iconGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    iconGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 6)
-    UICorner.Parent = MainFrame
+    local iconButton = Instance.new("ImageButton")
+    iconButton.Name = "FloatingIcon"
+    iconButton.Size = self.Settings.IconSize
+    iconButton.Position = UDim2.new(0.02, 0, 0.8, 0)
+    iconButton.AnchorPoint = Vector2.new(0, 0.5)
+    iconButton.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Accent
+    iconButton.Image = "rbxassetid://10734948210" -- Ícone moderno
+    iconButton.ScaleType = Enum.ScaleType.Fit
+    iconButton.BorderSizePixel = 0
+    iconButton.Parent = iconGui
 
-    local TopBar = Instance.new("Frame")
-    TopBar.Name = "TopBar"
-    TopBar.Size = UDim2.new(1, 0, 0, 30)
-    TopBar.Position = UDim2.new(0, 0, 0, 0)
-    TopBar.BackgroundColor3 = self.Themes.Default.Secondary
-    TopBar.BorderSizePixel = 0
-    TopBar.Parent = MainFrame
+    local iconCorner = Instance.new("UICorner")
+    iconCorner.CornerRadius = UDim.new(0, 12)
+    iconCorner.Parent = iconButton
 
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = UDim2.new(1, -10, 1, 0)
-    Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = name
-    Title.TextColor3 = self.Themes.Default.Text
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
-    Title.Parent = TopBar
+    local iconShadow = Instance.new("ImageLabel")
+    iconShadow.Size = UDim2.new(1, 10, 1, 10)
+    iconShadow.Position = UDim2.new(0, -5, 0, -5)
+    iconShadow.Image = "rbxassetid://8577636384" -- Sombra suave
+    iconShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    iconShadow.ImageTransparency = 0.8
+    iconShadow.ScaleType = Enum.ScaleType.Slice
+    iconShadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    iconShadow.BackgroundTransparency = 1
+    iconShadow.ZIndex = iconButton.ZIndex - 1
+    iconShadow.Parent = iconButton
 
-    local TabContainer = Instance.new("Frame")
-    TabContainer.Name = "TabContainer"
-    TabContainer.Size = UDim2.new(1, 0, 0, 30)
-    TabContainer.Position = UDim2.new(0, 0, 0, 30)
-    TabContainer.BackgroundColor3 = self.Themes.Default.Main
-    TabContainer.BorderSizePixel = 0
-    TabContainer.Parent = MainFrame
+    -- Animação de hover
+    iconButton.MouseEnter:Connect(function()
+        self:Tween(iconButton, {Size = self.Settings.IconSize + UDim2.new(0, 5, 0, 5)})
+    end)
 
-    local UIListLayout = Instance.new("UIListLayout")
-    UIListLayout.FillDirection = Enum.FillDirection.Horizontal
-    UIListLayout.Parent = TabContainer
+    iconButton.MouseLeave:Connect(function()
+        self:Tween(iconButton, {Size = self.Settings.IconSize})
+    end)
 
-    local ContentContainer = Instance.new("Frame")
-    ContentContainer.Name = "ContentContainer"
-    ContentContainer.Size = UDim2.new(1, -20, 1, -70)
-    ContentContainer.Position = UDim2.new(0, 10, 0, 60)
-    ContentContainer.BackgroundTransparency = 1
-    ContentContainer.Parent = MainFrame
+    return iconButton, iconGui
+end
 
-    local ContentUIListLayout = Instance.new("UIListLayout")
-    ContentUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ContentUIListLayout.Padding = UDim.new(0, 10)
-    ContentUIListLayout.Parent = ContentContainer
+-- Criar janela principal
+function FluentLibrary:CreateWindow(name, icon)
+    local window = {}
+    window.Name = name
 
-    local Tabs = {}
-    local ActiveTab = nil
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = name .. "Window"
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    function self:SetTheme(themeId)
-        if themeId == 1 then
-            self.CurrentTheme = "RGB"
-        else
-            self.CurrentTheme = "Default"
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 400, 0, 450)
+    mainFrame.Position = self.Settings.DefaultPosition
+    mainFrame.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Primary
+    mainFrame.BorderSizePixel = 0
+    mainFrame.ClipsDescendants = true
+    mainFrame.Visible = false
+    mainFrame.Parent = screenGui
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 14)
+    mainCorner.Parent = mainFrame
+
+    local mainShadow = Instance.new("ImageLabel")
+    mainShadow.Size = UDim2.new(1, 20, 1, 20)
+    mainShadow.Position = UDim2.new(0, -10, 0, -10)
+    mainShadow.Image = "rbxassetid://8577636384"
+    mainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    mainShadow.ImageTransparency = 0.9
+    mainShadow.ScaleType = Enum.ScaleType.Slice
+    mainShadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    mainShadow.BackgroundTransparency = 1
+    mainShadow.ZIndex = mainFrame.ZIndex - 1
+    mainShadow.Parent = mainFrame
+
+    -- Header
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 40)
+    header.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
+    header.BorderSizePixel = 0
+    header.Parent = mainFrame
+
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 14)
+    headerCorner.Parent = header
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -50, 1, 0)
+    title.Position = UDim2.new(0, 15, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = name
+    title.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Font = Enum.Font.GothamSemibold
+    title.TextSize = 16
+    title.Parent = header
+
+    local closeButton = Instance.new("ImageButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(1, -35, 0.5, -15)
+    closeButton.AnchorPoint = Vector2.new(1, 0.5)
+    closeButton.BackgroundTransparency = 1
+    closeButton.Image = "rbxassetid://10734947760" -- Ícone X
+    closeButton.ImageColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    closeButton.Parent = header
+
+    -- Tabs
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.Size = UDim2.new(1, -20, 0, 35)
+    tabContainer.Position = UDim2.new(0, 10, 0, 45)
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.Parent = mainFrame
+
+    local tabListLayout = Instance.new("UIListLayout")
+    tabListLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabListLayout.Padding = UDim.new(0, 5)
+    tabListLayout.Parent = tabContainer
+
+    -- Content
+    local contentContainer = Instance.new("Frame")
+    contentContainer.Name = "ContentContainer"
+    contentContainer.Size = UDim2.new(1, -20, 1, -90)
+    contentContainer.Position = UDim2.new(0, 10, 0, 85)
+    contentContainer.BackgroundTransparency = 1
+    contentContainer.Parent = mainFrame
+
+    window.Gui = screenGui
+    window.MainFrame = mainFrame
+    window.TabContainer = tabContainer
+    window.ContentContainer = contentContainer
+    window.Tabs = {}
+    window.ActiveTab = nil
+
+    -- Funções da janela
+    function window:Toggle()
+        self.MainFrame.Visible = not self.MainFrame.Visible
+        if self.MainFrame.Visible then
+            self.MainFrame.Size = UDim2.new(0, 0, 0, 0)
+            self:Tween(self.MainFrame, {Size = UDim2.new(0, 400, 0, 450)})
         end
-        self:UpdateColors(ScreenGui)
     end
 
-    function self:UpdateColors(gui)
-        for _, element in pairs(gui:GetDescendants()) do
-            if element:IsA("Frame") then
-                if element.Name == "MainFrame" then
-                    element.BackgroundColor3 = self.Themes.Default.Main
-                elseif element.Name == "TopBar" or element.Name == "TabContainer" then
-                    element.BackgroundColor3 = self.Themes.Default.Secondary
-                elseif element.Name == "ToggleBackground" then
-                    element.BackgroundColor3 = self.Themes.Default.Secondary
-                elseif element.Name == "ToggleIndicator" then
-                    if self.CurrentTheme == "RGB" then
-                        coroutine.wrap(function()
-                            while element and element.Parent do
-                                element.BackgroundColor3 = self.Themes.RGB.Accent()
-                                wait(0.1)
-                            end
-                        end)()
-                    else
-                        element.BackgroundColor3 = self.Themes.Default.Accent
-                    end
-                elseif element.Name == "Button" then
-                    if self.CurrentTheme == "RGB" then
-                        coroutine.wrap(function()
-                            while element and element.Parent do
-                                element.BackgroundColor3 = self.Themes.RGB.Accent()
-                                wait(0.1)
-                            end
-                        end)()
-                    else
-                        element.BackgroundColor3 = self.Themes.Default.Accent
-                    end
-                end
-            elseif element:IsA("TextLabel") or element:IsA("TextButton") then
-                element.TextColor3 = self.Themes.Default.Text
-            end
-        end
+    function window:Close()
+        self:Tween(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)})
+        wait(self.Settings.AnimationSpeed)
+        self.MainFrame.Visible = false
     end
 
-    function Tabs:AddTab(name)
-        local TabButton = Instance.new("TextButton")
-        TabButton.Name = "TabButton_" .. name
-        TabButton.Size = UDim2.new(0, 80, 1, 0)
-        TabButton.BackgroundColor3 = self.Themes.Default.Main
-        TabButton.BorderSizePixel = 0
-        TabButton.Text = name
-        TabButton.TextColor3 = self.Themes.Default.Text
-        TabButton.Font = Enum.Font.Gotham
-        TabButton.TextSize = 12
-        TabButton.Parent = TabContainer
+    closeButton.MouseButton1Click:Connect(function()
+        window:Close()
+    end)
 
-        local TabContent = Instance.new("ScrollingFrame")
-        TabContent.Name = "TabContent_" .. name
-        TabContent.Size = UDim2.new(1, 0, 1, 0)
-        TabContent.Position = UDim2.new(0, 0, 0, 0)
-        TabContent.BackgroundTransparency = 1
-        TabContent.BorderSizePixel = 0
-        TabContent.ScrollBarThickness = 5
-        TabContent.Visible = false
-        TabContent.Parent = ContentContainer
+    table.insert(self.Windows, window)
+    return window
+end
 
-        local TabUIListLayout = Instance.new("UIListLayout")
-        TabUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        TabUIListLayout.Padding = UDim.new(0, 10)
-        TabUIListLayout.Parent = TabContent
+-- Dropdown com search
+function FluentLibrary:CreateSearchDropdown(options, parent)
+    local dropdown = {}
+    dropdown.Options = options
+    dropdown.Selected = nil
 
-        TabButton.MouseButton1Click:Connect(function()
-            if ActiveTab then
-                ActiveTab.Visible = false
-            end
-            TabContent.Visible = true
-            ActiveTab = TabContent
-            
-            -- Destacar botão ativo
-            for _, btn in pairs(TabContainer:GetChildren()) do
-                if btn:IsA("TextButton") then
-                    if btn == TabButton then
-                        btn.BackgroundColor3 = self.Themes.Default.Secondary
-                    else
-                        btn.BackgroundColor3 = self.Themes.Default.Main
-                    end
-                end
-            end
-        end)
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Name = "SearchDropdown"
+    dropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+    dropdownFrame.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.Parent = parent
 
-        local TabFunctions = {}
+    local dropdownCorner = Instance.new("UICorner")
+    dropdownCorner.CornerRadius = UDim.new(0, 8)
+    dropdownCorner.Parent = dropdownFrame
 
-        function TabFunctions:AddToggle(name, default, callback)
-            local ToggleContainer = Instance.new("Frame")
-            ToggleContainer.Name = "ToggleContainer"
-            ToggleContainer.Size = UDim2.new(1, 0, 0, 30)
-            ToggleContainer.BackgroundTransparency = 1
-            ToggleContainer.LayoutOrder = #TabContent:GetChildren()
-            ToggleContainer.Parent = TabContent
+    local searchBox = Instance.new("TextBox")
+    searchBox.Name = "SearchBox"
+    searchBox.Size = UDim2.new(1, -40, 1, 0)
+    searchBox.Position = UDim2.new(0, 10, 0, 0)
+    searchBox.BackgroundTransparency = 1
+    searchBox.PlaceholderText = "Pesquisar..."
+    searchBox.Text = ""
+    searchBox.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.TextSize = 12
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    searchBox.Parent = dropdownFrame
 
-            local ToggleLabel = Instance.new("TextLabel")
-            ToggleLabel.Name = "ToggleLabel"
-            ToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-            ToggleLabel.Position = UDim2.new(0, 0, 0, 0)
-            ToggleLabel.BackgroundTransparency = 1
-            ToggleLabel.Text = name
-            ToggleLabel.TextColor3 = self.Themes.Default.Text
-            ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-            ToggleLabel.Font = Enum.Font.Gotham
-            ToggleLabel.TextSize = 12
-            ToggleLabel.Parent = ToggleContainer
+    local dropdownButton = Instance.new("ImageButton")
+    dropdownButton.Name = "DropdownButton"
+    dropdownButton.Size = UDim2.new(0, 30, 0, 30)
+    dropdownButton.Position = UDim2.new(1, -35, 0.5, -15)
+    dropdownButton.AnchorPoint = Vector2.new(1, 0.5)
+    dropdownButton.BackgroundTransparency = 1
+    dropdownButton.Image = "rbxassetid://10734948532" -- Ícone dropdown
+    dropdownButton.ImageColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    dropdownButton.Parent = dropdownFrame
 
-            local ToggleBackground = Instance.new("Frame")
-            ToggleBackground.Name = "ToggleBackground"
-            ToggleBackground.Size = UDim2.new(0, 40, 0, 20)
-            ToggleBackground.Position = UDim2.new(1, -40, 0.5, -10)
-            ToggleBackground.AnchorPoint = Vector2.new(1, 0.5)
-            ToggleBackground.BackgroundColor3 = self.Themes.Default.Secondary
-            ToggleBackground.BorderSizePixel = 0
-            ToggleBackground.Parent = ToggleContainer
+    local dropdownMenu = Instance.new("ScrollingFrame")
+    dropdownMenu.Name = "DropdownMenu"
+    dropdownMenu.Size = UDim2.new(1, 0, 0, 150)
+    dropdownMenu.Position = UDim2.new(0, 0, 1, 5)
+    dropdownMenu.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
+    dropdownMenu.BorderSizePixel = 0
+    dropdownMenu.ScrollBarThickness = 5
+    dropdownMenu.Visible = false
+    dropdownMenu.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    dropdownMenu.Parent = dropdownFrame
 
-            local ToggleCorner = Instance.new("UICorner")
-            ToggleCorner.CornerRadius = UDim.new(0, 10)
-            ToggleCorner.Parent = ToggleBackground
+    local menuListLayout = Instance.new("UIListLayout")
+    menuListLayout.Parent = dropdownMenu
 
-            local ToggleIndicator = Instance.new("Frame")
-            ToggleIndicator.Name = "ToggleIndicator"
-            ToggleIndicator.Size = UDim2.new(0, 16, 0, 16)
-            ToggleIndicator.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
-            ToggleIndicator.AnchorPoint = Vector2.new(1, 0.5)
-            ToggleIndicator.BackgroundColor3 = self.CurrentTheme == "RGB" and self.Themes.RGB.Accent() or self.Themes.Default.Accent
-            ToggleIndicator.BorderSizePixel = 0
-            ToggleIndicator.Parent = ToggleBackground
+    local isOpen = false
 
-            local IndicatorCorner = Instance.new("UICorner")
-            IndicatorCorner.CornerRadius = UDim.new(0, 8)
-            IndicatorCorner.Parent = ToggleIndicator
-
-            local isToggled = default or false
-
-            ToggleBackground.MouseButton1Click:Connect(function()
-                isToggled = not isToggled
-                if isToggled then
-                    ToggleIndicator:TweenPosition(UDim2.new(1, -18, 0.5, -8), "Out", "Quad", 0.2, true)
-                else
-                    ToggleIndicator:TweenPosition(UDim2.new(0, 2, 0.5, -8), "Out", "Quad", 0.2, true)
-                end
-                if callback then
-                    callback(isToggled)
-                end
-            end)
-
-            if self.CurrentTheme == "RGB" then
-                coroutine.wrap(function()
-                    while ToggleIndicator and ToggleIndicator.Parent do
-                        ToggleIndicator.BackgroundColor3 = self.Themes.RGB.Accent()
-                        wait(0.1)
-                    end
-                end)()
+    local function updateDropdown(filter)
+        filter = filter and filter:lower() or ""
+        
+        -- Ordenar opções alfabeticamente
+        local sortedOptions = {}
+        for _, option in ipairs(dropdown.Options) do
+            table.insert(sortedOptions, option)
+        end
+        table.sort(sortedOptions)
+        
+        -- Limpar menu atual
+        for _, child in ipairs(dropdownMenu:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
             end
         end
 
-        function TabFunctions:AddDropdown(name, options, callback)
-            local DropdownContainer = Instance.new("Frame")
-            DropdownContainer.Name = "DropdownContainer"
-            DropdownContainer.Size = UDim2.new(1, 0, 0, 30)
-            DropdownContainer.BackgroundTransparency = 1
-            DropdownContainer.LayoutOrder = #TabContent:GetChildren()
-            DropdownContainer.Parent = TabContent
+        -- Adicionar opções filtradas e ordenadas
+        for _, option in ipairs(sortedOptions) do
+            if option:lower():find(filter) then
+                local optionButton = Instance.new("TextButton")
+                optionButton.Size = UDim2.new(1, -10, 0, 30)
+                optionButton.Position = UDim2.new(0, 5, 0, 0)
+                optionButton.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Primary
+                optionButton.BorderSizePixel = 0
+                optionButton.Text = option
+                optionButton.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+                optionButton.Font = Enum.Font.Gotham
+                optionButton.TextSize = 12
+                optionButton.Parent = dropdownMenu
 
-            local DropdownLabel = Instance.new("TextLabel")
-            DropdownLabel.Name = "DropdownLabel"
-            DropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
-            DropdownLabel.Position = UDim2.new(0, 0, 0, 0)
-            DropdownLabel.BackgroundTransparency = 1
-            DropdownLabel.Text = name
-            DropdownLabel.TextColor3 = self.Themes.Default.Text
-            DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-            DropdownLabel.Font = Enum.Font.Gotham
-            DropdownLabel.TextSize = 12
-            DropdownLabel.Parent = DropdownContainer
-
-            local DropdownButton = Instance.new("TextButton")
-            DropdownButton.Name = "DropdownButton"
-            DropdownButton.Size = UDim2.new(0.5, 0, 1, 0)
-            DropdownButton.Position = UDim2.new(0.5, 0, 0, 0)
-            DropdownButton.BackgroundColor3 = self.Themes.Default.Secondary
-            DropdownButton.BorderSizePixel = 0
-            DropdownButton.Text = options[1] or "Select"
-            DropdownButton.TextColor3 = self.Themes.Default.Text
-            DropdownButton.Font = Enum.Font.Gotham
-            DropdownButton.TextSize = 12
-            DropdownButton.Parent = DropdownContainer
-
-            local DropdownCorner = Instance.new("UICorner")
-            DropdownCorner.CornerRadius = UDim.new(0, 4)
-            DropdownCorner.Parent = DropdownButton
-
-            local DropdownMenu = Instance.new("Frame")
-            DropdownMenu.Name = "DropdownMenu"
-            DropdownMenu.Size = UDim2.new(0.5, 0, 0, 0)
-            DropdownMenu.Position = UDim2.new(0.5, 0, 1, 5)
-            DropdownMenu.BackgroundColor3 = self.Themes.Default.Main
-            DropdownMenu.BorderSizePixel = 0
-            DropdownMenu.ClipsDescendants = true
-            DropdownMenu.Visible = false
-            DropdownMenu.Parent = DropdownContainer
-
-            local MenuCorner = Instance.new("UICorner")
-            MenuCorner.CornerRadius = UDim.new(0, 4)
-            MenuCorner.Parent = DropdownMenu
-
-            local MenuUIListLayout = Instance.new("UIListLayout")
-            MenuUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            MenuUIListLayout.Parent = DropdownMenu
-
-            local isOpen = false
-
-            DropdownButton.MouseButton1Click:Connect(function()
-                isOpen = not isOpen
-                DropdownMenu.Visible = isOpen
-                if isOpen then
-                    DropdownMenu:TweenSize(UDim2.new(0.5, 0, 0, #options * 30), "Out", "Quad", 0.2, true)
-                else
-                    DropdownMenu:TweenSize(UDim2.new(0.5, 0, 0, 0), "Out", "Quad", 0.2, true)
-                end
-            end)
-
-            for i, option in ipairs(options) do
-                local OptionButton = Instance.new("TextButton")
-                OptionButton.Name = "Option_" .. option
-                OptionButton.Size = UDim2.new(1, 0, 0, 30)
-                OptionButton.BackgroundColor3 = self.Themes.Default.Secondary
-                OptionButton.BorderSizePixel = 0
-                OptionButton.Text = option
-                OptionButton.TextColor3 = self.Themes.Default.Text
-                OptionButton.Font = Enum.Font.Gotham
-                OptionButton.TextSize = 12
-                OptionButton.LayoutOrder = i
-                OptionButton.Parent = DropdownMenu
-
-                OptionButton.MouseButton1Click:Connect(function()
-                    DropdownButton.Text = option
+                optionButton.MouseButton1Click:Connect(function()
+                    searchBox.Text = option
+                    dropdown.Selected = option
+                    dropdownMenu.Visible = false
                     isOpen = false
-                    DropdownMenu.Visible = false
-                    DropdownMenu.Size = UDim2.new(0.5, 0, 0, 0)
-                    if callback then
-                        callback(option)
-                    end
                 end)
             end
         end
-
-        function TabFunctions:AddParagraph(text)
-            local ParagraphContainer = Instance.new("Frame")
-            ParagraphContainer.Name = "ParagraphContainer"
-            ParagraphContainer.Size = UDim2.new(1, 0, 0, 0)
-            ParagraphContainer.AutomaticSize = Enum.AutomaticSize.Y
-            ParagraphContainer.BackgroundTransparency = 1
-            ParagraphContainer.LayoutOrder = #TabContent:GetChildren()
-            ParagraphContainer.Parent = TabContent
-
-            local ParagraphText = Instance.new("TextLabel")
-            ParagraphText.Name = "ParagraphText"
-            ParagraphText.Size = UDim2.new(1, 0, 0, 0)
-            ParagraphText.AutomaticSize = Enum.AutomaticSize.Y
-            ParagraphText.BackgroundTransparency = 1
-            ParagraphText.Text = text
-            ParagraphText.TextColor3 = self.Themes.Default.Text
-            ParagraphText.TextWrapped = true
-            ParagraphText.TextXAlignment = Enum.TextXAlignment.Left
-            ParagraphText.Font = Enum.Font.Gotham
-            ParagraphText.TextSize = 12
-            ParagraphText.Parent = ParagraphContainer
-        end
-
-        function TabFunctions:AddButton(name, callback)
-            local Button = Instance.new("TextButton")
-            Button.Name = "Button"
-            Button.Size = UDim2.new(1, 0, 0, 30)
-            Button.BackgroundColor3 = self.CurrentTheme == "RGB" and self.Themes.RGB.Accent() or self.Themes.Default.Accent
-            Button.BorderSizePixel = 0
-            Button.Text = name
-            Button.TextColor3 = self.Themes.Default.Text
-            Button.Font = Enum.Font.Gotham
-            Button.TextSize = 12
-            Button.LayoutOrder = #TabContent:GetChildren()
-            Button.Parent = TabContent
-
-            local ButtonCorner = Instance.new("UICorner")
-            ButtonCorner.CornerRadius = UDim.new(0, 4)
-            ButtonCorner.Parent = Button
-
-            Button.MouseButton1Click:Connect(function()
-                if callback then
-                    callback()
-                end
-            end)
-
-            if self.CurrentTheme == "RGB" then
-                coroutine.wrap(function()
-                    while Button and Button.Parent do
-                        Button.BackgroundColor3 = self.Themes.RGB.Accent()
-                        wait(0.1)
-                    end
-                end)()
-            end
-        end
-
-        return TabFunctions
     end
 
-    return Tabs
+    dropdownButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        dropdownMenu.Visible = isOpen
+        if isOpen then
+            updateDropdown()
+        end
+    end)
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        updateDropdown(searchBox.Text)
+    end)
+
+    updateDropdown()
+    return dropdown
 end
 
-return Library
+-- Sistema de tabs
+function FluentLibrary:CreateTab(window, name)
+    local tab = {}
+    tab.Name = name
+
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = "TabButton_" .. name
+    tabButton.Size = UDim2.new(0, 80, 1, 0)
+    tabButton.BackgroundColor3 = self.Settings.ThemeColors[self.CurrentTheme].Secondary
+    tabButton.BorderSizePixel = 0
+    tabButton.Text = name
+    tabButton.TextColor3 = self.Settings.ThemeColors[self.CurrentTheme].Text
+    tabButton.Font = Enum.Font.Gotham
+    tabButton.TextSize = 12
+    tabButton.Parent = window.TabContainer
+
+    local tabContent = Instance.new("ScrollingFrame")
+    tabContent.Name = "TabContent_" .. name
+    tabContent.Size = UDim2.new(1, 0, 1, 0)
+    tabContent.Position = UDim2.new(0, 0, 0, 0)
+    tabContent.BackgroundTransparency = 1
+    tabContent.BorderSizePixel = 0
+    tabContent.ScrollBarThickness = 5
+    tabContent.Visible = false
+    tabContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    tabContent.Parent = window.ContentContainer
+
+    local contentListLayout = Instance.new("UIListLayout")
+    contentListLayout.Padding = UDim.new(0, 10)
+    contentListLayout.Parent = tabContent
+
+    tabButton.MouseButton1Click:Connect(function()
+        if window.ActiveTab then
+            window.ActiveTab.Visible = false
+        end
+        tabContent.Visible = true
+        window.ActiveTab = tabContent
+    end)
+
+    function tab:AddButton(name, callback)
+        local button = Instance.new("TextButton")
+        button.Name = "Button_" .. name
+        button.Size = UDim2.new(1, 0, 0, 35)
+        button.BackgroundColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Accent
+        button.BorderSizePixel = 0
+        button.Text = name
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        button.Font = Enum.Font.GothamSemibold
+        button.TextSize = 13
+        button.Parent = tabContent
+
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 8)
+        buttonCorner.Parent = button
+
+        button.MouseButton1Click:Connect(callback)
+        return button
+    end
+
+    function tab:AddDropdown(name, options, callback)
+        local dropdownContainer = Instance.new("Frame")
+        dropdownContainer.Name = "DropdownContainer_" .. name
+        dropdownContainer.Size = UDim2.new(1, 0, 0, 35)
+        dropdownContainer.BackgroundTransparency = 1
+        dropdownContainer.Parent = tabContent
+
+        local dropdownLabel = Instance.new("TextLabel")
+        dropdownLabel.Name = "DropdownLabel"
+        dropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
+        dropdownLabel.BackgroundTransparency = 1
+        dropdownLabel.Text = name
+        dropdownLabel.TextColor3 = FluentLibrary.Settings.ThemeColors[FluentLibrary.CurrentTheme].Text
+        dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+        dropdownLabel.Font = Enum.Font.Gotham
+        dropdownLabel.TextSize = 12
+        dropdownLabel.Parent = dropdownContainer
+
+        local dropdown = FluentLibrary:CreateSearchDropdown(options, dropdownContainer)
+        
+        if callback then
+            dropdown.OnSelected = callback
+        end
+
+        return dropdown
+    end
+
+    window.Tabs[name] = tab
+    return tab
+end
+
+return FluentLibrary
